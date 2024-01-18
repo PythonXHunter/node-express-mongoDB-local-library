@@ -11,7 +11,20 @@ const bookinstance_list = asyncHandler(async (req, res, next) => {
 });
 
 const bookinstance_detail = asyncHandler(async (req, res, next) => {
-  res.send(`Not IMPLEMENTED: BookInstance Detail: ${req.params.id}`);
+  const bookInstance = await BookInstance.findById(req.params.id)
+    .populate("book")
+    .exec();
+
+  if(bookInstance === null){
+    const err = new Error("BookInstance not found");
+    err.status = 404;
+    return next(err);
+  }
+  // res.json({ bookInstance });
+  res.render("bookinstance_detail", {
+    title: "Book:",
+    bookinstance: bookInstance,
+  })
 });
 
 const bookinstance_create_get = asyncHandler(async (req, res, next) => {
