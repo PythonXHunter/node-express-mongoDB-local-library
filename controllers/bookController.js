@@ -4,6 +4,7 @@ const BookInstance = require('../models/bookinstance');
 const Genre = require('../models/genre');
 
 const asyncHandler = require('express-async-handler');
+const { body, validationResult } = require('express-validator');
 
 const index = asyncHandler(async (req, res, next) => {
   const [
@@ -65,12 +66,83 @@ const book_detail = asyncHandler(async (req, res, next) => {
 })
 
 const book_create_get = asyncHandler(async (req, res, next) => {
-  res.send("Not IMPLEMENTED: Book create GET");
+  const [allAuthors, allGenres] = await Promise.all([
+    Author.find().sort({ "family_name": 1 }).exec(),
+    Genre.find().sort({ "name": 1 }).exec(),
+  ]);
+
+  res.render("book_form", {
+    title: "Create Book",
+    authors: allAuthors,
+    genres: allGenres,
+  });
 });
 
-const book_create_post = asyncHandler(async (req, res, next) => {
-  res.send("Not IMPLEMENTED: Book create POST");
-});
+const book_create_post = [
+  (req, res, next) => {
+    if(!Array.isArray(req.body.genre)){
+      req.body.genre = 
+        typeof req.body.genre === "undefined" ? [] : [req.body.genre];
+    }
+    next();
+  },
+
+  body("title", "Title must not be empty.")
+    .trim()
+    .isLength({ min: 3})
+    .escape(),
+  body("author", "Author must not be empty.")
+    .trim()
+    .isLength({ min: 1 })
+    .escape(),
+  body("summary", "Summary must not be empty")
+    .trim()
+    .isLength({ min: 5 })
+    .escape(),
+  body("isbn", "ISBN must not be empty.")
+    .trim()
+    .isLength({ min: 1 })
+    .escape(),
+  body("genre.*")
+    .escape(),
+
+  asyncHandler(async (req, res, next) => {
+    const errors = validationResult(req);
+    // console.log("Genre", req.body.genre);
+    const book = Book({
+      title: req.body.title,
+      author: req.body.author,
+      summary: req.body.summary,
+      isbn: req.body.isbn,
+      genre: req.body.genre,
+    });
+    // console.log(book);
+    if(!errors.isEmpty()){
+      const [allAuthors, allGenres] = await Promise.all([
+        Author.find().sort({ family_name: -1 }).exec(),
+        Genre.find().sort({ name: -1 }).exec(),
+      ]);
+
+      for(const genre of allGenres){
+        if(book.genre.includes(genre._id)){
+          genre.checked = "true";
+        }
+      }
+      // console.log(allAuthors);
+      // console.log(allGenres);
+      res.render("book_form", {
+        title: "Create Book",
+        authors: allAuthors,
+        genres: allGenres,
+        book: book,
+        errors: errors.array(),
+      });
+    } else {
+      await book.save();
+      res.redirect(book.url);
+    }
+  }),
+];
 
 const book_update_get = asyncHandler(async (req, res, next) => {
   res.send("Not IMPLEMENTED: Book update GET");
