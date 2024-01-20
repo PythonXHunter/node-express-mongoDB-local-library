@@ -127,12 +127,67 @@ const author_delete_post = asyncHandler(async (req, res, next) => {
 });
 
 const author_update_get = asyncHandler(async (req, res, next) => {
-  res.send("Not IMPLEMENTED: Author update GET");
+  const author = await Author.findById(req.params.id).exec();
+  if(author === null){
+    const err = new Error("Author not found");
+    err.status = 400;
+    next(err);
+  }
+  // res.json({ author });
+  res.render("author_form", {
+    title: "Update Author",
+    author: author,
+  });
 });
 
-const author_update_post = asyncHandler(async (req, res, next) => {
-  res.send("Not IMPLEMENTED: Author update POST");
-});
+const author_update_post = [
+  body("first_name")
+    .trim()
+    .isLength({ min: 3 })
+    .escape()
+    .withMessage("First name must be specified")
+    .isAlphanumeric()
+    .withMessage("First name has non alphanumeric character"),
+  body("family_name")
+    .trim()
+    .isLength({ min: 3 })
+    .escape()
+    .withMessage("Family name must be specified")
+    .isAlphanumeric()
+    .withMessage("Family name has non alphanumeric character"),
+  body("date_of_birth", "Invalid date")
+    .optional({ values: "falsy" })
+    .isISO8601()
+    .toDate(),
+  body("date_of_death", "Invalid date")
+    .optional({ values: "falsy" })
+    .isISO8601()
+    .toDate(),
+
+  asyncHandler(async (req, res, next) => {
+    const errors = validationResult(req);
+
+    const author = Author({
+      first_name: req.body.first_name,
+      family_name: req.body.family_name,
+      date_of_birth: req.body.date_of_birth,
+      date_of_death: req.body.date_of_death,
+      _id: req.params.id,
+    });
+    if(!errors.isEmpty()){
+      // const author = await Author.findById(req.params.id).exec();
+      res.render("author_form", {
+        title: "Update Author",
+        author: author,
+        errors: errors.array(),
+      });
+      return;
+    } else {
+      const updatedAuthor = await Author.findByIdAndUpdate(req.params.id, author);
+      res.redirect(updatedAuthor.url);
+    }
+  }),
+];
 
 module.exports = {
   author_list,

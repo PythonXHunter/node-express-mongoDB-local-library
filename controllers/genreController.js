@@ -73,12 +73,44 @@ const genre_create_post = [
 ];
 
 const genre_update_get = asyncHandler(async (req, res, next) => {
-  res.send("Not IMPLEMENTED: Genre update GET");
+  const genre = await Genre.findById(req.params.id).exec();
+  if(genre === null){
+    const err = new Error("Genre not found");
+    err.status = 400;
+    return next(err);
+  }
+  res.render("genre_form", {
+    title: "Update Genre",
+    genre: genre,
+  })
 });
 
-const genre_update_post = asyncHandler(async (req, res, next) => {
-  res.send("Not IMPLEMENTED: Genre update POST");
-});
+const genre_update_post = [
+  body("name", "Genre name must contain at least 3 characters")
+    .trim()
+    .isLength({ min: 3 })
+    .escape(),
+  
+  asyncHandler(async (req, res, next) => {
+    const errors = validationResult(req);
+    const genre = Genre({
+      name: req.body.name,
+      _id: req.params.id,
+    });
+
+    if(!errors.isEmpty()){
+      res.render("genre_form", {
+        title: "Update Genre",
+        genre: genre,
+        errors: errors.array(),
+      });
+      return;
+    } else {
+      const updatedData = await Genre.findByIdAndUpdate(req.params.id, genre);
+      res.redirect(updatedData.url);
+    }
+  }),
+];
 
 const genre_delete_get = asyncHandler(async (req, res, next) => {
   const [genre, allBooksByGenre ] = await Promise.all([
