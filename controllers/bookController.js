@@ -153,11 +153,41 @@ const book_update_post = asyncHandler(async (req, res, next) => {
 });
 
 const book_delete_get = asyncHandler(async (req, res, next) => {
-  res.send("Not IMPLEMENTED: Book delete GET");
+  const [book, allBookInstancesByBook ] = await Promise.all([
+    Book.findById(req.params.id).exec(),
+    BookInstance.find({ book: req.params.id }, "status due_back").exec(),
+  ]);
+
+  if(book === null){
+    res.redirect("/catalog/books");
+  }
+  // res.json({ book, allBookInstancesByBook });
+  res.render("book_delete", {
+    title: "Delete Book",
+    book: book,
+    book_bookinstances : allBookInstancesByBook, 
+  });
 });
 
 const book_delete_post = asyncHandler(async (req, res, next) => {
-  res.send("Not IMPLEMENTED: Book delete POST");
+  const [book, allBookInstancesByBook] = await Promise.all([
+    Book.findById(req.params.id).exec(),
+    BookInstance.find({ book: req.params.id}, "status due_back").exec(),
+  ]);
+
+  if(allBookInstancesByBook.length > 0){
+    // res.json({ book, allBookInstancesByBook });
+    res.render("book_delete", {
+      title: "Delete Book",
+      book: book,
+      book_bookinstances: allBookInstancesByBook,
+    });
+    return;
+  } else {
+    console.log(req.body);
+    await Book.findByIdAndDelete(req.body.book_id);
+    res.redirect("/catalog/books");
+  }
 });
 
 module.exports = {
